@@ -1,21 +1,23 @@
 @testitem "AffineTransform" tags = [:transforms] begin
   using StaticArrays
-  struct Device <: AbstractSpace end
+  struct Scanner <: AbstractSpace end
   # 90 degrees about z and a shift: exact in floating point
-  t = AffineTransform([0 -1 0; 1 0 0; 0 0 1], [0, 0, 120]; source=LPS(), target=Device())
+  t = AffineTransform([0 -1 0; 1 0 0; 0 0 1], [0, 0, 120]; source=LPS(), target=Scanner())
   @test t((1.0, 0.0, 0.0)) == SVector(0.0, 1.0, 120.0)
-  @test source(t) == LPS() && target(t) == Device()
+  @test source(t) == LPS() && target(t) == Scanner()
   @test isbits(t)
   # the inverse swaps the spaces and undoes the map
   ti = inv(t)
-  @test source(ti) == Device() && target(ti) == LPS()
+  @test source(ti) == Scanner() && target(ti) == LPS()
   @test ti(t((1.0, 2.0, 3.0))) == SVector(1.0, 2.0, 3.0)
   # compose applies the first transform, then the second
-  c = compose(ti, t)
+  c = TomoImages.compose(ti, t)
   @test source(c) == LPS() && target(c) == LPS()
   @test c((1.0, 2.0, 3.0)) == SVector(1.0, 2.0, 3.0)
   # composing transforms whose spaces do not chain is an error
-  @test_throws ArgumentError compose(t, t)
+  @test_throws ArgumentError TomoImages.compose(t, t)
+  # Base's composition operator
+  @test (ti ∘ t)((1.0, 2.0, 3.0)) == c((1.0, 2.0, 3.0))
 end
 
 @testitem "LPS and RAS" tags = [:transforms] begin

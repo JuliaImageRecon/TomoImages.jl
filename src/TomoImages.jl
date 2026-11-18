@@ -14,15 +14,17 @@ import Interpolations
 
 const KA = KernelAbstractions
 
-export AbstractSpace, DefaultSpace, LPS, RAS, spacename
+export AbstractSpace, DefaultSpace, LPS, RAS
 export AbstractGeometry, GridGeometry, spacing, origin, direction, space, affine, index_to_world,
-       world_to_index, fov, fov_center, axiscoords, samegrid, subgrid
-export AbstractSpatialTransform, AffineTransform, source, target, compose, transform_between, transform_geometry
-export AbstractAxis, NumericAxis, CategoricalAxis
-export AbstractSpatialImage, SpatialImage, geometry, spatialdims, extra, meta
-export AbstractResampler, NearestResampler, LinearResampler, BSplineResampler, resample, resample!, default_resampler, supports
+       world_to_index, fov, fov_center, axiscoords
+export AbstractSpatialTransform, AffineTransform, source, target, transform_between, transform_geometry
+export GridAxis, NumericAxis, CategoricalAxis
+export AbstractSpatialImage, SpatialImage, geometry, meta, selectvalue
+export AbstractResampler, NearestResampler, LinearResampler, BSplineResampler, resample
 
-public IndexMap, index_map, resample_eltype, checkspaces, worlddims, coords, labels, unit, indexof
+public spacename, worlddims, subgrid, compose, checkspaces
+public dims, spatialdims, unit, indexof
+public resample!, default_resampler, supports, resample_eltype, IndexMap, index_map
 
 include("spaces/spaces.jl")
 include("geometry/geometry.jl")

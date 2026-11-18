@@ -22,7 +22,7 @@ nothing #hide
 # * the **direction** ``D`` holds the unit directions of the index axes as columns. Its columns are
 #   orthonormal: a grid can be rotated or reflected, never sheared or scaled.
 #
-# This is the convention of ITK. A grid whose index axis 1 runs along `-x`
+# A grid whose index axis 1 runs along `-x`
 # has a direction column `(-1, 0)`, never a negative spacing.
 #
 # The figure shows a grid of 6 × 4 pixels of 1 mm × 1.5 mm, rotated by 20 degrees: the gray lines are
@@ -40,27 +40,41 @@ nothing #hide
 #
 # ## Selections and slices
 #
-# Selecting voxels keeps their positions ([`subgrid`](@ref)): a range moves the origin to its first
-# voxel and multiplies the spacing by its step, a reversed range flips the direction column. An
-# integer drops the dimension, and the result stays in the space of the full grid: a slice of a
-# rotated volume is a 2D grid in a 3D space, whose direction is a 3 × 2 matrix. Its pixels keep
-# their 3D positions:
+# Indexing a geometry like an array selects voxels and keeps their positions: a range moves the
+# origin to its first voxel and multiplies the spacing by its step, a reversed range flips the
+# direction column. An integer drops the dimension, and the result stays in the space of the full
+# grid: a slice of a rotated volume is a 2D grid in a 3D space, whose direction is a 3 × 2 matrix.
+# Its pixels keep their 3D positions:
 
 volume = GridGeometry((8, 8, 4); spacing=(1.0, 1.0, 2.0), direction=[c -s 0; s c 0; 0 0 1])
-slice = subgrid(volume, (1:8, 1:8, 3))
+slice = volume[:, :, 3]
 size(direction(slice)), index_to_world(slice, (2, 5)) == index_to_world(volume, (2, 5, 3))
+
+# ## Dimensions
+#
+# An image describes every array dimension by name. A grid dimension is a [`GridAxis`](@ref)`(k)`:
+# index axis `k` of the geometry. It has no coordinates of its own, because the direction of the
+# geometry may mix the index axes; the name only labels the index axis. Every other dimension is a
+# vector of values: coordinates with a unit ([`NumericAxis`](@ref)), labels
+# ([`CategoricalAxis`](@ref)), or any `AbstractVector`. Grid dimensions may sit anywhere among the
+# others and in any order: MPI reconstructions have (contrast, x, y, z, time).
+#
+# Integers and ranges always select by index, also by name (`img[time=3]`); values are selected with
+# [`selectvalue`](@ref). An integer coordinate such as coil `3` is then never confused with the
+# third index. `permutedims` reorders the dimensions and keeps the geometry, since every grid
+# dimension names its index axis.
 
 # ## Spaces
 #
 # The positions of a grid are numbers, and numbers only mean something in a coordinate system: the
-# coordinates of a CT scanner, those of an MPI device, or a patient space such as [`LPS`](@ref)
+# coordinates of a CT scanner, those of an MPI scanner, or a patient space such as [`LPS`](@ref)
 # (`+x` toward the patient's left, `+y` posterior, `+z` superior) or [`RAS`](@ref) (`+x` right,
 # `+y` anterior, `+z` superior). The space of a grid names this coordinate system.
 #
 # Two grids with the same numbers in different spaces describe different voxels, so
-# [`samegrid`](@ref) and [`resample`](@ref) treat them as different. Conversely, the same voxels
-# have different numbers in different spaces. In LPS and RAS, the first two coordinates change
-# sign:
+# [`isapprox`](@ref Base.isapprox(::GridGeometry, ::GridGeometry)) and [`resample`](@ref) treat them
+# as different. Conversely, the same voxels have different numbers in different spaces. In LPS and
+# RAS, the first two coordinates change sign:
 
 lps = GridGeometry((4, 4, 2); origin=(10.0, 20.0, 30.0), space=LPS())
 ras = transform_geometry(lps, transform_between(LPS(), RAS()))
@@ -77,10 +91,10 @@ origin(ras), index_to_world(ras, (4, 1, 1)) == transform_between(LPS(), RAS())(i
 # * conventions that hold without data, such as LPS and RAS ([`transform_between`](@ref));
 # * acquisition metadata, such as the position of the bed (methods of `transform_between` in the
 #   packages that read the metadata);
-# * registration or calibration between devices, computed by other packages.
+# * registration or calibration between scanners, computed by other packages.
 #
-# [`compose`](@ref) chains transforms and checks that the target of the first is the source of the
-# second.
+# [`TomoImages.compose`](@ref) (or `t2 ∘ t1`) chains transforms and checks that the target of the
+# first is the source of the second.
 #
 # ## Resampling pulls
 #

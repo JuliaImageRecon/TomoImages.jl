@@ -15,13 +15,13 @@ abstract type AbstractSpatialTransform end
     AffineTransform(A, b; source, target)
 
 The transform `x -> A * x + b` from positions in the space `source` to positions in the space
-`target`. The spaces are part of the type, so that [`compose`](@ref) and [`resample`](@ref) can check
+`target`. The spaces are part of the type, so that [`TomoImages.compose`](@ref) and [`resample`](@ref) can check
 them; with `isbits` spaces the transform is `isbits`.
 
 # Example
 ```julia
-# a rotation by 90 degrees about z and a shift of 120 mm along z, from LPS into a device space
-t = AffineTransform([0 -1 0; 1 0 0; 0 0 1], [0, 0, 120]; source=LPS(), target=MPIDevice())
+# a rotation by 90 degrees about z and a shift of 120 mm along z, from LPS into the space of a scanner
+t = AffineTransform([0 -1 0; 1 0 0; 0 0 1], [0, 0, 120]; source=LPS(), target=MPIScanner())
 t([1.0, 0.0, 0.0])                          # [0, 1, 120]
 ```
 """
@@ -74,6 +74,8 @@ end
 """
     compose(t2, t1)
 
+    t2 ∘ t1
+
 The transform that applies `t1` and then `t2`: from `source(t1)` to `target(t2)`. Requires
 `target(t1) == source(t2)`.
 """
@@ -84,6 +86,9 @@ function compose(t2::AffineTransform{W}, t1::AffineTransform{W}) where {W}
   T = eltype(A)
   AffineTransform{W,T,typeof(t1.source),typeof(t2.target),W * W}(A, b, t1.source, t2.target)
 end
+
+# Base's composition operator, written without the Unicode character
+(::typeof(getfield(Base, Symbol("\u2218"))))(t2::AffineTransform, t1::AffineTransform) = compose(t2, t1)
 
 """
     transform_between(from, to)

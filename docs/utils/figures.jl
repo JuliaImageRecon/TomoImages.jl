@@ -4,16 +4,18 @@
 
 using CairoMakie, TomoImages
 
-# the four corners of pixel (i, j) in the space of g
-pixel_corners(g, i, j) = [Point2f(index_to_world(g, (i + a, j + b))) for (a, b) in ((-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5))]
+# the four corners of pixel (i, j) in the space of g, as the world coordinates `coords` (two of them)
+pixel_corners(g, i, j, coords) = [Point2f(index_to_world(g, (i + a, j + b))[collect(coords)])
+                                  for (a, b) in ((-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5))]
 
-# a 2D image in world coordinates
-function world_image!(ax, img; colormap=:grays, colorrange=extrema(parent(img)), kwargs...)
+# a 2D image (or a slice of a 3D image) in the world coordinates `coords`
+function world_image!(ax, img; coords=(1, 2), colormap=:grays, colorrange=extrema(parent(img)), kwargs...)
   g = geometry(img)
-  if direction(g) == [1 0; 0 1]
+  D = direction(g)
+  if size(D, 1) == 2 && D == [1 0; 0 1]
     return heatmap!(ax, axiscoords(g, 1), axiscoords(g, 2), parent(img); colormap, colorrange, kwargs...)
   end
-  quads = [pixel_corners(g, i, j) for i in 1:size(g, 1), j in 1:size(g, 2)]
+  quads = [pixel_corners(g, i, j, coords) for i in 1:size(g, 1), j in 1:size(g, 2)]
   poly!(ax, vec(quads); color=vec(Float32.(parent(img))), colormap, colorrange, strokewidth=0, kwargs...)
 end
 
@@ -24,8 +26,8 @@ function outline!(ax, g; kwargs...)
   lines!(ax, Point2f.(corners); kwargs...)
 end
 
-function world_axis(fig, pos; title="", limits=nothing)
-  ax = Axis(fig[pos...]; aspect=DataAspect(), title, xlabel="x (mm)", ylabel="y (mm)")
+function world_axis(fig, pos; title="", limits=nothing, xlabel="x (mm)", ylabel="y (mm)")
+  ax = Axis(fig[pos...]; aspect=DataAspect(), title, xlabel, ylabel)
   limits === nothing || limits!(ax, limits...)
   ax
 end

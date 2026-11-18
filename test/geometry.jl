@@ -10,8 +10,8 @@
   @test LPS() != RAS()
   @test Session(1) == Session(1)
   @test Session(1) != Session(2)
-  @test spacename(LPS()) == "LPS"
-  @test spacename(Session(3)) == "Session"
+  @test TomoImages.spacename(LPS()) == "LPS"
+  @test TomoImages.spacename(Session(3)) == "Session"
   @test isbitstype(Session)
 end
 
@@ -55,12 +55,12 @@ end
   @test GridGeometry((2, 2); direction=[c -s; s c]) isa GridGeometry
 end
 
-@testitem "GridGeometry: subgrid" tags = [:geometry] begin
+@testitem "GridGeometry: indexing" tags = [:geometry] begin
   using StaticArrays
   g = GridGeometry((8, 6, 4); spacing=(0.5, 1.0, 2.0), origin=(1.0, 2.0, 3.0), space=RAS())
   # every selected voxel keeps its position: voxel k of the subgrid is voxel first + step (k - 1)
   for inds in ((2:3:8, 1:6, 4:-1:1), (8:-2:2, 3:3, 1:4))
-    s = subgrid(g, inds)
+    s = g[inds...]
     for k in CartesianIndices(size(s))
       full = ntuple(d -> inds[d][k[d]], 3)
       @test index_to_world(s, Tuple(k)) == index_to_world(g, full)
@@ -68,30 +68,36 @@ end
     @test space(s) == RAS()
   end
   # a negative step flips the direction column instead of the spacing
-  s = subgrid(g, (8:-2:2, 1:6, 1:4))
+  s = g[8:-2:2, :, 1:4]
   @test spacing(s) == SVector(1.0, 1.0, 2.0)
   @test direction(s)[:, 1] == SVector(-1.0, 0.0, 0.0)
   # dropping a dimension gives a slice that stays in the 3D space
-  slice = subgrid(g, (1:8, 3, 1:4))
+  slice = g[:, 3, :]
   @test size(slice) == (8, 4)
   @test TomoImages.worlddims(slice) == 3
   for k in CartesianIndices(size(slice))
     @test index_to_world(slice, Tuple(k)) == index_to_world(g, (k[1], 3, k[2]))
   end
-  @test_throws BoundsError subgrid(g, (0:2, 1:6, 1:4))
+  @test_throws BoundsError g[0:2, :, :]
+  # a geometry is indexed like an array: CartesianIndices and positions inside it
+  @test CartesianIndices(g) == CartesianIndices((8, 6, 4))
+  @test index_to_world(g, (1, 1, 1)) in g && index_to_world(g, (8, 6, 4)) in g
+  # the voxels extend half a voxel beyond their centers along every axis
+  @test (0.75, 2.0, 3.0) in g && !((0.5, 2.0, 3.0) in g)
 end
 
-@testitem "GridGeometry: samegrid" tags = [:geometry] begin
+@testitem "GridGeometry: isapprox" tags = [:geometry] begin
   g = GridGeometry((4, 4); spacing=(1.0, 1.0), origin=(0.0, 0.0), space=LPS())
-  @test samegrid(g, GridGeometry((4, 4); origin=(0.0, 0.0), space=LPS()))
-  # within a thousandth of a voxel by default
-  @test samegrid(g, GridGeometry((4, 4); origin=(0.0005, 0.0), space=LPS()))
-  @test !samegrid(g, GridGeometry((4, 4); origin=(0.01, 0.0), space=LPS()))
+  @test isapprox(g, GridGeometry((4, 4); origin=(0.0, 0.0), space=LPS()))
+  # within a thousandth of the smallest spacing by default, or a given length
+  @test isapprox(g, GridGeometry((4, 4); origin=(0.0005, 0.0), space=LPS()))
+  @test !isapprox(g, GridGeometry((4, 4); origin=(0.01, 0.0), space=LPS()))
+  @test isapprox(g, GridGeometry((4, 4); origin=(0.01, 0.0), space=LPS()); atol=0.02)
   # a different space is a different grid, even with the same numbers
-  @test !samegrid(g, GridGeometry((4, 4); origin=(0.0, 0.0), space=RAS()))
-  @test !samegrid(g, GridGeometry((4, 5); space=LPS()))
+  @test !isapprox(g, GridGeometry((4, 4); origin=(0.0, 0.0), space=RAS()))
+  @test !isapprox(g, GridGeometry((4, 5); space=LPS()))
   # the same voxels described from the other corner: flipped direction, moved origin
   flipped = GridGeometry((4, 4); origin=(3.0, 0.0), direction=[-1 0; 0 1], space=LPS())
-  @test !samegrid(g, flipped)
-  @test samegrid(subgrid(g, (4:-1:1, 1:4)), flipped)
+  @test !isapprox(g, flipped)
+  @test isapprox(g[4:-1:1, :], flipped)
 end

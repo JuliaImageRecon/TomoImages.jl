@@ -15,7 +15,7 @@ AbstractSpace
 DefaultSpace
 LPS
 RAS
-spacename
+TomoImages.spacename
 ```
 
 ## Grid geometries
@@ -34,6 +34,7 @@ affine
 fov
 fov_center
 axiscoords
-samegrid
-subgrid
+Base.isapprox(::GridGeometry, ::GridGeometry)
+Base.in(::Any, ::GridGeometry)
+TomoImages.subgrid
 ```

@@ -121,7 +121,7 @@ function resample(r::AbstractResampler, img::AbstractSpatialImage, target::GridG
   outsize = ntuple(d -> (k = findfirst(==(d), sd); k === nothing ? size(data, d) : size(target, k)), ndims(data))
   out = similar(data, Tout, outsize)
   resample!(r, out, img, imap; fill=fill === nothing ? zero(Tout) : convert(Tout, fill))
-  SpatialImage(out, target, sd, extra(img), meta(img))
+  SpatialImage(out, target, dims(img), meta(img))
 end
 
 """

@@ -1,6 +1,6 @@
 # # Getting Started
 #
-# This page builds a grid, puts an image on it, selects a part of the image and resamples it onto a
+# This page builds a grid, puts an image on it, selects parts of the image and resamples it onto a
 # second, rotated grid.
 
 using TomoImages, CairoMakie
@@ -20,13 +20,23 @@ g = GridGeometry((64, 48); spacing=(0.5, 0.5), origin=(-15.75, -11.75))
 
 index_to_world(g, (1, 1)), fov_center(g), world_to_index(g, (0.0, 0.0))
 
+# A geometry is indexed like an array. The result describes the selected pixels, each at its
+# position:
+
+right_half = g[33:64, :]
+index_to_world(right_half, (1, 1)) == index_to_world(g, (33, 1))
+
 # ## An image
 #
 # A [`SpatialImage`](@ref) wraps an array with its geometry. The values here come from a function of
-# the position: a disk of radius 6 mm and a bar.
+# the position `(x, y)` in millimeters: a disk of radius 6 mm and a bar.
 
-shape(x) = (hypot(x[1] - 3, x[2]) < 6 ? 1.0 : 0.0) + (abs(x[1] + 8) < 2 && abs(x[2]) < 9 ? 0.5 : 0.0)
-img = SpatialImage([shape(index_to_world(g, (i, j))) for i in 1:64, j in 1:48], g);
+shape(x, y) = (hypot(x - 3, y) < 6 ? 1.0 : 0.0) + (abs(x + 8) < 2 && abs(y) < 9 ? 0.5 : 0.0)
+img = SpatialImage([shape(index_to_world(g, (i, j))...) for i in 1:64, j in 1:48], g);
+
+# Every dimension has a name; without names they are `x1, x2, ...`:
+
+keys(TomoImages.dims(img))
 
 # Selections keep the geometry: every selected pixel keeps its position. The right half of the
 # image, every second row:
@@ -34,9 +44,9 @@ img = SpatialImage([shape(index_to_world(g, (i, j))) for i in 1:64, j in 1:48], 
 part = img[33:64, 1:2:48];
 index_to_world(geometry(part), (1, 1)) == index_to_world(g, (33, 1))
 
-# Broadcasting keeps it too:
+# The same by name, and broadcasting keeps the geometry too:
 
-geometry(2 .* img .+ 1) === g
+isapprox(geometry(img[x1=33:64]), right_half), geometry(2 .* img .+ 1) === g
 
 # ## Resampling onto a rotated grid
 #

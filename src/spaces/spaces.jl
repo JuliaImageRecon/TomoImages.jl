@@ -16,8 +16,8 @@ kernels.
 
 # Example
 ```julia
-struct MPIDevice <: AbstractSpace end      # defined by the package that owns the space
-g = GridGeometry((40, 40, 20); spacing=(1.0, 1.0, 1.0), space=MPIDevice())
+struct MPIScanner <: AbstractSpace end      # defined by the package that owns the space
+g = GridGeometry((40, 40, 20); spacing=(1.0, 1.0, 1.0), space=MPIScanner())
 ```
 """
 abstract type AbstractSpace end
@@ -26,14 +26,14 @@ abstract type AbstractSpace end
     DefaultSpace()
 
 The space of geometries that do not name one: for code that works in a single coordinate system,
-where no image ever meets an image from another device or session.
+where no image ever meets an image from another scanner or session.
 """
 struct DefaultSpace <: AbstractSpace end
 
 """
     LPS()
 
-The patient space of DICOM and ITK: `+x` toward the patient's left, `+y` toward posterior (the
+The patient space of DICOM: `+x` toward the patient's left, `+y` toward posterior (the
 back), `+z` toward superior (the head). See [`RAS`](@ref) for the other common convention and
 [`transform_between`](@ref) for the transform between both.
 """

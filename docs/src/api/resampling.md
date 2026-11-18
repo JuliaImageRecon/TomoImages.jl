@@ -9,9 +9,9 @@ AbstractResampler
 NearestResampler
 LinearResampler
 BSplineResampler
-default_resampler
-supports
-resample!
+TomoImages.default_resampler
+TomoImages.supports
+TomoImages.resample!
 TomoImages.resample_eltype
 TomoImages.IndexMap
 TomoImages.index_map

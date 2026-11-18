@@ -23,15 +23,15 @@ count(parent(resample(NearestResampler(), vessel, coarse)))
 
 # ## The resampler
 #
-# `AnyNeighbor` marks an output pixel if any of the input pixels around its position is marked.
-# A resampler implements [`resample!`](@ref): it fills the output array `out` with the values of the
-# image at the continuous input indices `imap(j)` of the output indices `j`. This one supports images
-# without extra axes on the CPU, which [`supports`](@ref) states, and returns `Bool`, which
-# [`TomoImages.resample_eltype`](@ref) states:
+# `AnyNeighbor` marks an output pixel if any of the input pixels around its position is marked. A
+# resampler implements [`TomoImages.resample!`](@ref): it fills the output array `out` with the
+# values of the image at the continuous input indices `imap(j)` of the output indices `j`. This one
+# supports images with only grid dimensions, on the CPU, which [`TomoImages.supports`](@ref) states,
+# and returns `Bool`, which [`TomoImages.resample_eltype`](@ref) states:
 
 struct AnyNeighbor <: AbstractResampler end
 
-TomoImages.supports(::AnyNeighbor, img) = eltype(img) == Bool && parent(img) isa Array && isempty(extra(img))
+TomoImages.supports(::AnyNeighbor, img) = eltype(img) == Bool && parent(img) isa Array && ndims(img) == ndims(geometry(img))
 TomoImages.resample_eltype(::AnyNeighbor, ::Type) = Bool
 
 function TomoImages.resample!(::AnyNeighbor, out, img, imap; fill=false)

@@ -1,25 +1,26 @@
 # Images
 
-An image is an array whose spatial dimensions lie on a grid geometry, with named axes for the other
-dimensions.
+An image is an array whose grid dimensions lie on a grid geometry, with a named description of
+every dimension.
 
 ```@docs
 AbstractSpatialImage
 SpatialImage
 geometry
-spatialdims
-extra
+TomoImages.dims
+TomoImages.spatialdims
 meta
+selectvalue
 ```
 
 ## Axes
 
+Every dimension of an image is a grid axis or is described by a vector of values.
+
 ```@docs
-AbstractAxis
+GridAxis
 NumericAxis
 CategoricalAxis
-TomoImages.coords
 TomoImages.unit
-TomoImages.labels
 TomoImages.indexof
 ```

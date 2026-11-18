@@ -1,13 +1,13 @@
 # # Define a Space
 #
 # A space names the coordinate system of a grid or the ends of a transform. TomoImages defines the
-# patient spaces [`LPS`](@ref) and [`RAS`](@ref) and a [`DefaultSpace`](@ref); a device, a session or
+# patient spaces [`LPS`](@ref) and [`RAS`](@ref) and a [`DefaultSpace`](@ref); a scanner, a session or
 # an atlas gets its own space in the package that knows it. This guide defines spaces, gives them
 # names, and adds the transforms that are known from acquisition metadata.
 
 using TomoImages
 
-# ## A space for a device
+# ## A space for a scanner
 #
 # A space is a type, usually a subtype of [`AbstractSpace`](@ref). Without fields it stands for one
 # coordinate system:
@@ -32,11 +32,11 @@ struct Session <: AbstractSpace
 end
 Session(1) == Session(1), Session(1) == Session(2)
 
-# [`spacename`](@ref) names a space in messages and files; by default the name of its type. A method
-# for the own type gives a better one:
+# [`TomoImages.spacename`](@ref) names a space in messages and files; by default the name of its
+# type. A method for the own type gives a better one:
 
 TomoImages.spacename(s::Session) = "session $(s.id)"
-spacename(Session(2))
+TomoImages.spacename(Session(2))
 
 # ## Transforms known from metadata
 #
@@ -66,7 +66,7 @@ space(h), index_to_world(h, (1, 1, 1)) == t(index_to_world(g, (1, 1, 1)))
 # whose spaces do not chain is an error:
 
 try #hide
-  compose(t, t)
+  TomoImages.compose(t, t)
 catch e #hide
   print(sprint(showerror, e)) #hide
 end #hide

@@ -24,7 +24,7 @@ dimensions. Voxel `i` (1-based) has its center at
 * `space`: the coordinate space the origin and direction are given in (an [`AbstractSpace`](@ref)).
 
 `W > N` describes a grid of lower dimension in a larger space, such as a slice of a 3D volume (see
-[`subgrid`](@ref)). Lengths have no unit attached; all geometries of one application use the same
+indexing the geometry, [`TomoImages.subgrid`](@ref)). Lengths have no unit attached; all geometries of one application use the same
 (mm by convention).
 
 The orthonormality check accepts direction matrices stored in `Float32`: their columns are
@@ -175,27 +175,45 @@ function axiscoords(g::GridGeometry{N,W,T}, d::Integer) where {N,W,T}
 end
 
 """
-    samegrid(a, b; tol=1e-3)
+    isapprox(a::GridGeometry, b::GridGeometry; atol)
 
-Whether the geometries `a` and `b` describe the same voxels: the same size and space, and voxel
-centers that agree to within `tol` times the smallest voxel spacing. The centers are compared at the
-corners of the grid, which determine an affine grid completely.
+Whether `a` and `b` describe the same voxels: the same size and space, and voxel centers that agree
+to within `atol` (a length in the unit of the geometries; default a thousandth of the smallest voxel
+spacing of `a`). The centers are compared at the corners of the grid, which determine an affine
+grid completely.
 """
-function samegrid(a::GridGeometry{N,W}, b::GridGeometry; tol=1e-3) where {N,W}
+function Base.isapprox(a::GridGeometry{N,W}, b::GridGeometry; atol=1e-3 * minimum(spacing(a))) where {N,W}
   (size(a) == size(b) && worlddims(b) == W && space(a) == space(b)) || return false
-  limit = tol * minimum(spacing(a))
   for c in CartesianIndices(ntuple(_ -> 2, N))
     i = ntuple(d -> c[d] == 1 ? 1 : size(a, d), N)
-    sqrt(sum(abs2, index_to_world(a, i) - index_to_world(b, i))) <= limit || return false
+    sqrt(sum(abs2, index_to_world(a, i) - index_to_world(b, i))) <= atol || return false
   end
   true
 end
 
 """
+    in(x, g::GridGeometry)
+
+Whether the position `x` lies inside the voxels of `g`: within half a voxel beyond the outermost
+voxel centers along every index axis. For a grid of lower dimension than its space (a slice), `x` is
+projected onto the plane of the grid.
+"""
+function Base.in(x, g::GridGeometry{N}) where {N}
+  i = world_to_index(g, x)
+  all(k -> 0.5 <= i[k] <= size(g, k) + 0.5, 1:N)
+end
+
+Base.CartesianIndices(g::GridGeometry) = CartesianIndices(size(g))
+
+Base.getindex(g::GridGeometry{N}, inds::Vararg{Union{Integer,AbstractRange{<:Integer},Colon},N}) where {N} =
+  subgrid(g, ntuple(d -> inds[d] isa Colon ? (1:size(g, d)) : inds[d], N))
+
+"""
+    g[inds...]
     subgrid(g, inds)
 
 The geometry of the voxels `inds` of `g`: one entry per index dimension, an integer (the dimension
-is dropped) or a range (kept, with its step). Every selected voxel keeps its position in the space:
+is dropped), a range (kept, with its step) or a colon. Every selected voxel keeps its position in the space:
 the origin moves to the first selected voxel, the spacing is scaled by the step, and a range with a
 negative step flips the direction column. Dropping a dimension keeps the space, so the result may be
 a slice in a space of more dimensions.

@@ -8,7 +8,7 @@ AbstractSpatialTransform
 AffineTransform
 source
 target
-compose
+TomoImages.compose
 transform_between
 transform_geometry
 TomoImages.checkspaces
