@@ -16,9 +16,10 @@ makedocs(;
   pagesonly=true,
   checkdocs=:exports,
   authors="Niklas Hackelberg and contributors",
-  remotes=nothing,
+  repo=Remotes.GitHub("JuliaImageRecon", "TomoImages.jl"),
   format=Documenter.HTML(;
     prettyurls=get(ENV, "CI", "false") == "true",
+    canonical="https://JuliaImageRecon.github.io/TomoImages.jl",
     edit_link="main",
     collapselevel=1,
   ),
@@ -50,3 +51,5 @@ makedocs(;
     ],
   ],
 )
+
+deploydocs(repo="github.com/JuliaImageRecon/TomoImages.jl.git", devbranch="main", push_preview=true)
