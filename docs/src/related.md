@@ -8,13 +8,11 @@ store or show them. This page lists the packages around it and what each of them
 These packages compute images from measurements; their results are what TomoImages describes.
 
 - [CTOperators.jl](https://github.com/JuliaImageRecon/CTOperators.jl): projectors for iterative CT
-  reconstruction and FDK, on CPUs and GPUs. Its images are described by an `ImageGeom` of
-  ImageGeoms.jl.
-- [MRIReco.jl](https://github.com/MagneticResonanceImaging/MRIReco.jl): MRI reconstruction. It
-  returns its images as an `AxisArray` with the dimensions (x, y, z, echoes, coils, repetitions).
+  reconstruction and FDK, on CPUs and GPUs.
+- [MRIReco.jl](https://github.com/MagneticResonanceImaging/MRIReco.jl): MRI reconstruction, from
+  k-space data with several echoes, coils and repetitions.
 - [MPIReco.jl](https://github.com/MagneticParticleImaging/MPIReco.jl): reconstruction for magnetic
-  particle imaging. It returns an `ImageMeta` around an `AxisArray` with the dimensions (color, x,
-  y, z, time), built with ImageUtils.jl.
+  particle imaging, of several tracers and many frames per second.
 - [KomaMRI.jl](https://github.com/JuliaHealth/KomaMRI.jl): an MRI simulator. Its phantoms are point
   clouds of spins with tissue properties; it reconstructs through MRIReco.jl.
 - [Sinograms.jl](https://github.com/JuliaImageRecon/Sinograms.jl): CT geometries and filtered back
@@ -33,8 +31,9 @@ These packages attach names, coordinates or metadata to arrays.
   selectors (`At`, `Near`, `Between`), stacks of layers and many integrations. Rotated grids use a
   `Transformed` lookup.
 - [Rasters.jl](https://github.com/rafaqz/Rasters.jl): builds on DimensionalData.jl and adds
-  coordinate reference systems, reprojection and resampling for geospatial data. It does for maps
-  roughly what TomoImages does for tomographic images.
+  coordinate reference systems, reprojection and resampling for geospatial data: for maps, the
+  coordinate system and the transforms between grids that TomoImages provides for tomographic
+  images.
 - [ImageCore.jl](https://github.com/JuliaImages/ImageCore.jl) and the JuliaImages packages around
   it: traits such as `pixelspacing` and `spacedirections` for images, colors, and image
   processing. There is no trait for the origin of an image.
@@ -47,8 +46,8 @@ These packages attach names, coordinates or metadata to arrays.
 TomoImages differs from AxisArrays.jl and DimensionalData.jl in what it puts first: one geometry for
 all grid dimensions together (origin, spacing and a direction matrix, so rotated grids and slices
 are exact), the coordinate space as a type that is checked, transforms between spaces, and
-resampling between grids. Its non-grid dimensions are deliberately simple; for analysis along them,
-the packages above offer far more.
+resampling between grids. Its other dimensions carry coordinates or labels and support selection by
+index and by value; the packages above add lookups, selectors and analysis along them.
 
 ## Algorithms and formats
 
@@ -63,5 +62,5 @@ the packages above offer far more.
 - [NIfTI.jl](https://github.com/JuliaNeuroscience/NIfTI.jl) and
   [DICOM.jl](https://github.com/JuliaHealth/DICOM.jl): reading and writing medical image files.
 
-[Conventions of Formats and Packages](@ref) shows how the grids of DICOM, NIfTI, ImageGeoms.jl and
-the reconstruction packages translate into grid geometries.
+[Conventions of Formats and Packages](@ref) shows how the grids of DICOM, NIfTI and ImageGeoms.jl
+translate into grid geometries.

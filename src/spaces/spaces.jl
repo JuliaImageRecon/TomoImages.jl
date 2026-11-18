@@ -9,7 +9,7 @@ A space is any value with
 * `==`: whether two spaces are the same coordinate system (by default, structs compare their
   fields, so a parametric space such as `struct Session <: AbstractSpace; id::Int; end` compares by
   value);
-* [`spacename`](@ref): a name for display and files.
+* [`spacename`](@ref): a name for messages and displays.
 
 Spaces should be `isbits`, so that geometries and transforms holding them can be passed into
 kernels.
@@ -51,6 +51,6 @@ struct RAS <: AbstractSpace end
 """
     spacename(space) -> String
 
-The name of `space` for display and files. Defaults to the name of its type.
+The name of `space` in messages and displays. Defaults to the name of its type.
 """
 spacename(s) = string(nameof(typeof(s)))

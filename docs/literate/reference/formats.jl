@@ -1,8 +1,9 @@
 # # Conventions of Formats and Packages
 #
 # File formats and other packages describe the placement of a grid with other numbers. This page
-# shows the conventions of the common ones and translates example values of each into a
-# [`GridGeometry`](@ref), checked against the format's own formula for the position of a voxel.
+# lists the conventions of the common ones and translates example values of each into a
+# [`GridGeometry`](@ref), checked against the format's own formula for the position of a voxel
+# (see the references at the end).
 
 using TomoImages, LinearAlgebra
 
@@ -14,7 +15,6 @@ using TomoImages, LinearAlgebra
 # | DICOM | Image Position (Patient): center of the first voxel | 0 | Image Orientation (Patient): direction cosines of a row and a column | LPS |
 # | NIfTI | sform: position of voxel `(0, 0, 0)` | 0 | the sform matrix (spacing included) | RAS |
 # | ImageGeoms.jl | offsets, in voxels, of the grid center | 1 | none; spacings may be negative | none |
-# | MPIReco.jl, MRIReco.jl | first value of each axis range: center of the first voxel | 1 | none | none |
 #
 # ## DICOM
 #
@@ -50,13 +50,12 @@ all(index_to_world(g, (i + 1, j + 1)) ≈ dicom(i, j) for i in (0, 17, 255), j i
 # ## NIfTI
 #
 # A NIfTI file maps voxel indices `(i, j, k)`, counted from 0, to positions `(x, y, z)` in mm in
-# the RAS patient space, through the 4 × 4 matrix of its sform (the qform stores a rotation and
-# the spacing separately). The columns of the matrix hold the steps along the index axes, spacing
-# included, and its last column the position of voxel `(0, 0, 0)`:
+# the RAS patient space, through the 4 × 4 matrix of its sform. The first three columns hold the
+# steps along the index axes, spacing included, and the fourth the position of voxel `(0, 0, 0)`:
 
-R = [1 0 0; 0 cosd(6) sind(6); 0 -sind(6) cosd(6)]     # a tilt of 6 degrees about x
+R = [1 0 0; 0 cosd(6) -sind(6); 0 sind(6) cosd(6)]     # a rotation by 6 degrees about x
 A = [R * Diagonal([-0.9, 0.9, 0.9]) [90.0, -126.0, -72.0]
-     0 0 0 1]
+     0 0 0 1];
 
 # The spacing is the length of each column, the direction the columns divided by it, the origin the
 # last column:
@@ -67,17 +66,19 @@ g = GridGeometry((200, 240, 180); spacing=spacing_nifti, origin=A[1:3, 4],
 all(index_to_world(g, (i + 1, j + 1, k + 1)) ≈ (A * [i, j, k, 1])[1:3] for i in (0, 99), j in (0, 239), k in (0, 50))
 
 # The first index axis runs toward `-x` (a negative first entry), which the direction matrix
-# expresses with a flipped column; the spacing stays positive. In LPS the same grid is:
+# expresses with a flipped column; the spacing stays positive. In LPS the same grid has its origin
+# at:
 
-origin(transform_geometry(g, transform_between(RAS(), LPS())))
+TomoImages.origin(transform_geometry(g, transform_between(RAS(), LPS())))
 
 # An sform may also contain a shear, which a [`GridGeometry`](@ref) does not represent: its
 # direction must have orthonormal columns.
 #
 # ## ImageGeoms.jl
 #
-# [ImageGeoms.jl](https://github.com/JuliaImageRecon/ImageGeoms.jl), used by CTOperators.jl, places
-# voxel `i` (counted from 1) of a dimension with `n` voxels, spacing `Δ` and offset `o` at
+# [ImageGeoms.jl](https://github.com/JuliaImageRecon/ImageGeoms.jl), with the conventions of the
+# Michigan Image Reconstruction Toolbox, places voxel `i` (counted from 1) of a dimension with `n`
+# voxels, spacing `Δ` and offset `o` at
 #
 # ```math
 # x = \left((i - 1) - \left(\tfrac{n - 1}{2} + o\right)\right) \Delta,
@@ -100,13 +101,15 @@ all(index_to_world(g, (i, j, k)) ≈ [imagegeoms(i, 1), imagegeoms(j, 2), imageg
 # ImageGeoms.jl has no coordinate system; the geometry gets the [`DefaultSpace`](@ref) unless the
 # scanner's space is known.
 #
-# ## Axis ranges of MPIReco.jl and MRIReco.jl
 #
-# MPIReco.jl and MRIReco.jl return an `AxisArray` whose spatial axes are ranges of positions in
-# Unitful lengths: the first value is the center of the first voxel, the step the spacing. MRIReco.jl
-# starts every range at 0 mm, so its images carry no position. Without the units, as plain
-# numbers in mm:
-
-x, y, z = range(-19.0, step=2.0, length=20), range(-19.0, step=2.0, length=20), range(-9.0, step=2.0, length=10)
-g = GridGeometry((length(x), length(y), length(z)); spacing=step.((x, y, z)), origin=first.((x, y, z)))
-all(index_to_world(g, (i, j, k)) == [x[i], y[j], z[k]] for i in (1, 20), j in (1, 7), k in (1, 10))
+# ## References
+#
+# - DICOM Standard, PS3.3 Information Object Definitions, Section C.7.6.2 Image Plane Module, in
+#   particular C.7.6.2.1.1 Image Position and Image Orientation, National Electrical Manufacturers
+#   Association:
+#   [dicom.nema.org](https://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.2.html).
+# - NIfTI-1 Data Format, header file `nifti1.h` ("Official definition of the nifti1 header"),
+#   Neuroimaging Informatics Technology Initiative:
+#   [NIFTI-Imaging/nifti_clib](https://github.com/NIFTI-Imaging/nifti_clib/blob/master/niftilib/nifti1.h).
+# - ImageGeoms.jl, `src/core.jl` (the function `axis`):
+#   [JuliaImageRecon/ImageGeoms.jl](https://github.com/JuliaImageRecon/ImageGeoms.jl).

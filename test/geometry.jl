@@ -70,7 +70,7 @@ end
   # a negative step flips the direction column instead of the spacing
   s = g[8:-2:2, :, 1:4]
   @test spacing(s) == SVector(1.0, 1.0, 2.0)
-  @test direction(s)[:, 1] == SVector(-1.0, 0.0, 0.0)
+  @test TomoImages.direction(s)[:, 1] == SVector(-1.0, 0.0, 0.0)
   # dropping a dimension gives a slice that stays in the 3D space
   slice = g[:, 3, :]
   @test size(slice) == (8, 4)
@@ -79,6 +79,8 @@ end
     @test index_to_world(slice, Tuple(k)) == index_to_world(g, (k[1], 3, k[2]))
   end
   @test_throws BoundsError g[0:2, :, :]
+  # subgrid takes colons like indexing does
+  @test TomoImages.subgrid(g, (:, 3, :)) == g[:, 3, :]
   # a geometry is indexed like an array: CartesianIndices and positions inside it
   @test CartesianIndices(g) == CartesianIndices((8, 6, 4))
   @test index_to_world(g, (1, 1, 1)) in g && index_to_world(g, (8, 6, 4)) in g

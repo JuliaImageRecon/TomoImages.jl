@@ -17,8 +17,9 @@ end
 
 The [`IndexMap`](@ref) from the voxels of the geometry `out` to the continuous voxel indices of the
 geometry `in`: the position of output voxel `j` in the space of `out`, mapped by `t` into the space
-of `in` (no transform if both are in the same space), as an index of `in`. The map is computed in
-`Float64` and stored in `eltype`.
+of `in` (without `t`, positions are taken as they are), as an index of `in`. Both geometries need
+the same numbers of index and world dimensions. The map is computed in `Float64` and stored in
+`eltype`. It does not check spaces; [`resample`](@ref) does before it calls `index_map`.
 """
 function index_map(out::GridGeometry{N,W}, in::GridGeometry{N,W}, t=nothing; eltype::Type{T}=Float64) where {N,W,T}
   A, b = transform_parts(t, W)

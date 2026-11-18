@@ -18,7 +18,7 @@ so that images from different scanners can be compared, resampled onto each othe
 using TomoImages
 
 g = GridGeometry((64, 64, 32); spacing=(0.5, 0.5, 1.0), origin=(-15.75, -15.75, -15.5), space=LPS())
-img = SpatialImage(rand(Float32, 64, 64, 32), g; dims=(x=GridAxis(1), y=GridAxis(2), z=GridAxis(3)))
+img = TomoImage(rand(Float32, 64, 64, 32), g; dims=(x=GridAxis(1), y=GridAxis(2), z=GridAxis(3)))
 
 index_to_world(g, (1, 1, 1))       # the origin: the center of the first voxel
 slice = img[z=16]                  # a 64x64 image whose geometry is a slice in the 3D space

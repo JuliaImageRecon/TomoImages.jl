@@ -1,7 +1,7 @@
 @testitem "Resampling: same grid and whole-voxel shifts" tags = [:resampling] begin
   g = GridGeometry((5, 4, 3); spacing=(1.0, 2.0, 0.5), origin=(0.0, 0.0, 0.0), space=LPS())
   data = reshape(Float32.(1:(2*5*4*3*3)), 2, 5, 4, 3, 3)
-  img = SpatialImage(data, g; dims=(a=CategoricalAxis(1:2), x=GridAxis(1), y=GridAxis(2), z=GridAxis(3), b=NumericAxis(1:3)))
+  img = TomoImage(data, g; dims=(a=CategoricalAxis(1:2), x=GridAxis(1), y=GridAxis(2), z=GridAxis(3), b=NumericAxis(1:3)))
   # on its own grid every output voxel is an input voxel center: the data, exactly
   for r in (NearestResampler(), LinearResampler(), BSplineResampler(0), BSplineResampler(1))
     out = resample(r, img, g)
@@ -11,7 +11,7 @@
   # a grid shifted by two voxels along x reads the input two voxels further; beyond the input: fill
   shifted = GridGeometry((5, 4, 3); spacing=(1.0, 2.0, 0.5), origin=(2.0, 0.0, 0.0), space=LPS())
   for r in (NearestResampler(), LinearResampler())
-    out = parent(resample(r, img, shifted; fill=-1))
+    out = parent(resample(r, img, shifted; fillvalue=-1))
     @test out[:, 1:3, :, :, :] == data[:, 3:5, :, :, :]
     # the input extends half a voxel beyond its last center, so x = 4.5 still reads voxel 5
     @test all(==(-1), out[:, 4:5, :, :, :])
@@ -23,7 +23,7 @@ end
   # every sum is exact, so linear interpolation reproduces f exactly
   g = GridGeometry((6, 5); spacing=(1.0, 1.0), origin=(0.0, 0.0))
   f(i, j) = 3i - 2j + 7.0
-  img = SpatialImage([f(i, j) for i in 1:6, j in 1:5], g)
+  img = TomoImage([f(i, j) for i in 1:6, j in 1:5], g)
   half = GridGeometry((10, 8); spacing=(0.5, 0.5), origin=(0.5, 0.5))
   out = parent(resample(LinearResampler(), img, half))
   for j in CartesianIndices(size(half))
@@ -44,7 +44,7 @@ end
   # the input on a scanner grid; the output on an LPS grid rotated by 90 degrees about z
   gi = GridGeometry((4, 3, 2); spacing=(1.0, 1.0, 1.0), origin=(0.0, 0.0, 0.0), space=Scanner())
   data = reshape(Float64.(1:24), 4, 3, 2)
-  img = SpatialImage(data, gi)
+  img = TomoImage(data, gi)
   # t maps LPS positions (the output's space) into scanner positions (the input's space)
   t = AffineTransform([0 1 0; -1 0 0; 0 0 1], [0, 0, 0]; source=LPS(), target=Scanner())
   go = GridGeometry((3, 4, 2); spacing=(1.0, 1.0, 1.0), origin=(-2.0, 0.0, 0.0), space=LPS())
@@ -58,17 +58,17 @@ end
 
 @testitem "Resampling: label maps" tags = [:resampling] begin
   g = GridGeometry((4, 4); spacing=(1.0, 1.0), origin=(0.0, 0.0))
-  labels = SpatialImage(UInt8[i > 2 ? 2 : 1 for i in 1:4, j in 1:4], g)
+  labels = TomoImage(UInt8[i > 2 ? 2 : 1 for i in 1:4, j in 1:4], g)
   # integer images default to nearest neighbor and keep their element type: no averaged labels
   @test TomoImages.default_resampler(labels) == NearestResampler()
   fine = GridGeometry((8, 8); spacing=(0.5, 0.5), origin=(-0.25, -0.25))
   out = resample(labels, fine)
   @test eltype(out) == UInt8
   @test Set(parent(out)) == Set(UInt8[1, 2])
-  @test TomoImages.default_resampler(SpatialImage(rand(4, 4), g)) == LinearResampler()
+  @test TomoImages.default_resampler(TomoImage(rand(4, 4), g)) == LinearResampler()
   # B-splines need the data on the CPU in an Array
   @test TomoImages.supports(BSplineResampler(3), labels)
-  @test !TomoImages.supports(BSplineResampler(3), SpatialImage(view(rand(4, 4), :, :), g))
+  @test !TomoImages.supports(BSplineResampler(3), TomoImage(view(rand(4, 4), :, :), g))
 end
 
 @testitem "Resampling: grid axes in any order" tags = [:resampling] begin
@@ -76,9 +76,9 @@ end
   # every resampler gives the permuted result of the (x, y) image
   g = GridGeometry((6, 5); spacing=(1.0, 1.0), origin=(0.0, 0.0))
   f(i, j) = 3i - 2j + 7.0
-  img = SpatialImage([f(i, j) for i in 1:6, j in 1:5], g)
+  img = TomoImage([f(i, j) for i in 1:6, j in 1:5], g)
   yx = permutedims(img, (2, 1))
-  @test TomoImages.spatialdims(yx) == (2, 1)
+  @test TomoImages.griddims(yx) == (2, 1)
   half = GridGeometry((10, 8); spacing=(0.5, 0.5), origin=(0.5, 0.5))
   for r in (NearestResampler(), LinearResampler())
     @test parent(resample(r, yx, half)) == permutedims(parent(resample(r, img, half)))
@@ -88,4 +88,18 @@ end
   a = parent(resample(BSplineResampler(3), yx, half))
   b = permutedims(parent(resample(BSplineResampler(3), img, half)))
   @test maximum(abs, a .- b) <= 64 * eps(Float64) * maximum(abs, b)
+end
+
+@testitem "Resampling: requirements" tags = [:resampling] begin
+  # a slice (2D grid in 3D space) needs a target with the same index and world dimensions
+  volume = GridGeometry((4, 4, 4))
+  slice = TomoImage(rand(4, 4), volume[:, :, 2])
+  @test_throws ArgumentError resample(slice, GridGeometry((4, 4)))
+  @test size(resample(slice, volume[:, :, 3])) == (4, 4)
+  # the index map is at least Float32, also for Float16 data
+  @test TomoImages.map_eltype(Float16) == Float32 && TomoImages.map_eltype(Float64) == Float64
+  # the default fill value follows the output element type
+  img = TomoImage(UInt8[1 2; 3 4], GridGeometry((2, 2)))
+  out = resample(LinearResampler(), img, GridGeometry((2, 2); origin=(5.0, 5.0)))
+  @test eltype(out) == Float32 && all(iszero, parent(out))
 end

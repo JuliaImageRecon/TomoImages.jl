@@ -2,16 +2,17 @@
     AbstractGeometry
 
 Supertype of geometries: maps between voxel indices and positions in a coordinate space. A geometry
-implements `size`, [`index_to_world`](@ref), [`world_to_index`](@ref) and [`space`](@ref); functions of
-this package use only these, never the fields.
+implements `size`, [`index_to_world`](@ref), [`world_to_index`](@ref) and [`space`](@ref). Images
+take any `AbstractGeometry`; indexing images and [`resample`](@ref) need a [`GridGeometry`](@ref).
 """
 abstract type AbstractGeometry end
 
 """
-    GridGeometry(size; spacing, origin, direction, space=DefaultSpace())
+    GridGeometry(size; spacing=(1, ..., 1), origin=zeros(W), direction=first N axes, space=DefaultSpace())
 
-A regular grid of `size` voxels (`N` index dimensions) in a coordinate space with `W >= N` world
-dimensions. Voxel `i` (1-based) has its center at
+A regular grid of `size` voxels (`N` index dimensions) in a coordinate space with `W >= N`
+dimensions. Positions in the space are called world coordinates. Voxel `i` (1-based) has its center
+at
 
     x = origin + direction * (spacing .* (i .- 1))
 
@@ -23,13 +24,16 @@ dimensions. Voxel `i` (1-based) has its center at
   a negative spacing.
 * `space`: the coordinate space the origin and direction are given in (an [`AbstractSpace`](@ref)).
 
-`W > N` describes a grid of lower dimension in a larger space, such as a slice of a 3D volume (see
-indexing the geometry, [`TomoImages.subgrid`](@ref)). Lengths have no unit attached; all geometries of one application use the same
-(mm by convention).
+`W` is the length of `origin`, or the number of rows of `direction`; both must agree. The element
+type is the floating-point promotion of spacing, origin and direction (integers give `Float64`).
 
-The orthonormality check accepts direction matrices stored in `Float32`: their columns are
-orthonormal only up to rounding, a few `eps(Float32)`, which the check tolerates up to
-`64 * eps(Float32)`.
+`W > N` describes a grid of lower dimension in a larger space, such as a slice of a 3D volume (see
+`g[inds...]` and [`TomoImages.subgrid`](@ref)). Lengths have no unit attached; all geometries of one
+application use the same (mm by convention).
+
+Throws an `ArgumentError` for sizes or spacings that are not positive, a non-finite origin, or a
+direction whose columns are not orthonormal to within `64 * eps(Float32)` (so that directions stored
+in `Float32` pass).
 
 # Example
 ```julia
@@ -54,7 +58,8 @@ struct GridGeometry{N,W,T<:AbstractFloat,S,L} <: AbstractGeometry
     all(isfinite, origin) || throw(ArgumentError("origin must be finite, got $(Tuple(origin))"))
     D = SMatrix{W,N,Float64}(direction)
     maximum(abs, D' * D - I) <= 64 * eps(Float32) ||
-      throw(ArgumentError("the columns of direction must be orthonormal (rotations and reflections only), got $direction"))
+      throw(ArgumentError("the columns of direction must be orthonormal (rotations and reflections only), " *
+                          "got $direction"))
     new{N,W,T,S,L}(size, spacing, origin, direction, space)
   end
 end
@@ -165,9 +170,11 @@ fov_center(g::GridGeometry{N,W,T}) where {N,W,T} = index_to_world(g, (SVector{N,
 
 The coordinates of the voxel centers along index axis `d`, as a range, for an axis that runs along
 axis `d` of the space (column `d` of the direction is the unit vector `e_d`). Packages that take
-coordinate vectors per axis, such as ImagePhantoms.jl, use it for axis-aligned grids.
+coordinate vectors per axis, such as ImagePhantoms.jl, use it for axis-aligned grids. Throws an
+`ArgumentError` for any other axis, also a flipped one (`-e_d`).
 """
 function axiscoords(g::GridGeometry{N,W,T}, d::Integer) where {N,W,T}
+  1 <= d <= min(N, W) || throw(ArgumentError("the grid has no index axis $d along an axis of its space"))
   e = SVector{W,T}(ntuple(k -> T(k == d), W))
   g.direction[:, d] == e ||
     throw(ArgumentError("index axis $d of the grid does not run along axis $d of its space; use index_to_world"))
@@ -179,7 +186,7 @@ end
 
 Whether `a` and `b` describe the same voxels: the same size and space, and voxel centers that agree
 to within `atol` (a length in the unit of the geometries; default a thousandth of the smallest voxel
-spacing of `a`). The centers are compared at the corners of the grid, which determine an affine
+spacing of `a`); only `atol` is accepted. The centers are compared at the corners of the grid, which determine an affine
 grid completely.
 """
 function Base.isapprox(a::GridGeometry{N,W}, b::GridGeometry; atol=1e-3 * minimum(spacing(a))) where {N,W}
@@ -196,7 +203,7 @@ end
 
 Whether the position `x` lies inside the voxels of `g`: within half a voxel beyond the outermost
 voxel centers along every index axis. For a grid of lower dimension than its space (a slice), `x` is
-projected onto the plane of the grid.
+projected onto the plane of the grid; its distance from the plane is not checked.
 """
 function Base.in(x, g::GridGeometry{N}) where {N}
   i = world_to_index(g, x)
@@ -220,6 +227,7 @@ a slice in a space of more dimensions.
 """
 function subgrid(g::GridGeometry{N,W,T}, inds::Tuple) where {N,W,T}
   length(inds) == N || throw(ArgumentError("need $N indices, got $(length(inds))"))
+  inds = ntuple(d -> inds[d] isa Colon ? (1:size(g, d)) : inds[d], N)
   for (d, r) in enumerate(inds)
     if r isa Integer
       1 <= r <= size(g, d) || throw(BoundsError(g, inds))

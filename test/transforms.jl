@@ -33,4 +33,7 @@ end
     @test index_to_world(h, Tuple(i)) == t(index_to_world(g, Tuple(i)))
   end
   @test_throws ArgumentError transform_geometry(h, t)
+  # only rotations and reflections keep a grid a grid
+  shear = AffineTransform([1 0.5 0; 0 1 0; 0 0 1], zeros(3); source=LPS(), target=RAS())
+  @test_throws ArgumentError transform_geometry(g, shear)
 end

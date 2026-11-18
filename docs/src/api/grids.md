@@ -10,6 +10,8 @@ TomoImages
 
 ## Spaces
 
+The coordinate systems that geometries and transforms refer to.
+
 ```@docs
 AbstractSpace
 DefaultSpace
@@ -20,12 +22,15 @@ TomoImages.spacename
 
 ## Grid geometries
 
+A grid geometry, its parts, and the functions that map between voxel indices and positions.
+`origin` and `direction` are public but not exported, since the names are common.
+
 ```@docs
 AbstractGeometry
 GridGeometry
 spacing
-origin
-direction
+TomoImages.origin
+TomoImages.direction
 space
 TomoImages.worlddims
 index_to_world

@@ -1,4 +1,4 @@
 include("axes.jl")
-include("spatialimage.jl")
+include("tomoimage.jl")
 include("indexing.jl")
 include("broadcast.jl")

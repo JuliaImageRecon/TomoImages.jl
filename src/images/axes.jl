@@ -17,7 +17,8 @@ end
     NumericAxis(values; unit=nothing)
 
 An ordered axis with a coordinate for every index, in its own unit: time in s, echo time in ms,
-frequency in kHz. It is an `AbstractVector` of its coordinates. `unit` is any value that describes
+frequency in kHz. It is an `AbstractVector` of its coordinates, which should be sorted (selection by
+value assumes it; it is not checked). `unit` is any value that describes
 them (a string, or a unit of Unitful.jl).
 
 Any `AbstractVector` can describe a non-grid dimension; `NumericAxis` adds the unit.
@@ -59,7 +60,8 @@ unit(::AbstractVector) = nothing
 
 The index of `value` on the axis. On a numeric axis (a vector of numbers that is not a
 [`CategoricalAxis`](@ref)) the index of the nearest coordinate, which must lie within half the
-distance to its neighbor at the ends; on other axes the index of the equal element.
+distance to its neighbor at the ends (on an axis of one coordinate, the value must be equal); on
+other axes the index of the first equal element. Throws an `ArgumentError` if there is none.
 """
 function indexof(a::AbstractVector{<:Number}, v::Number)
   k = argmin(abs.(a .- v))
@@ -86,4 +88,5 @@ end
 
 # default names of the dimensions: grid axes x1, x2, ...; other dimensions dim_d
 default_dims(::Val{Ns}, N) where {Ns} =
-  NamedTuple{ntuple(d -> d <= Ns ? Symbol(:x, d) : Symbol(:dim_, d), N)}(ntuple(d -> d <= Ns ? GridAxis(d) : nothing, N))
+  NamedTuple{ntuple(d -> d <= Ns ? Symbol(:x, d) : Symbol(:dim_, d), N)}(
+    ntuple(d -> d <= Ns ? GridAxis(d) : nothing, N))

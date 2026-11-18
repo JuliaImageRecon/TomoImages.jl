@@ -3,7 +3,9 @@
 
 Supertype of transforms: maps from positions in one space (its [`source`](@ref)) to positions in
 another (its [`target`](@ref)). A transform implements `source(t)`, `target(t)` and `t(x)` for a
-point `x`, and `inv(t)` where it has an inverse.
+point `x`, and `inv(t)` where it has an inverse. The functions of this package that take transforms
+([`resample`](@ref), [`TomoImages.compose`](@ref), [`transform_geometry`](@ref)) accept
+[`AffineTransform`](@ref)s.
 
 Registration results are stored in the direction resampling evaluates: from the space of the fixed
 image (the output grid) to the space of the moving image (the image that is resampled). See
@@ -15,8 +17,9 @@ abstract type AbstractSpatialTransform end
     AffineTransform(A, b; source, target)
 
 The transform `x -> A * x + b` from positions in the space `source` to positions in the space
-`target`. The spaces are part of the type, so that [`TomoImages.compose`](@ref) and [`resample`](@ref) can check
-them; with `isbits` spaces the transform is `isbits`.
+`target`. The spaces are part of the type, so that [`TomoImages.compose`](@ref) and
+[`resample`](@ref) can check them; with `isbits` spaces the transform is `isbits`. `inv(t)` is the
+transform from `target` back to `source`.
 
 # Example
 ```julia
@@ -93,8 +96,8 @@ end
 """
     transform_between(from, to)
 
-The transform between two spaces whose relation is fixed by convention, such as [`LPS`](@ref) and
-[`RAS`](@ref). Packages add methods for their own spaces, with acquisition metadata as an extra
+The transform between two spaces whose relation is fixed by convention: [`LPS`](@ref) to
+[`RAS`](@ref) and back. Packages add methods for their own spaces, with acquisition metadata as an extra
 argument where the relation depends on it: `transform_between(from, to, meta)`.
 """
 function transform_between end
@@ -107,9 +110,15 @@ transform_between(s::RAS, t::LPS) = AffineTransform(Diagonal(SVector(-1.0, -1.0,
 
 The geometry of the same voxels as `g`, written in the space `target(t)`: the origin is mapped by
 `t` and the direction by its linear part, which must be orthogonal (a rotation or a reflection).
-The voxels do not move; only the coordinates they are described in change.
+The voxels do not move; only the coordinates they are described in change. The result has the
+element type of the transform. Throws an `ArgumentError` if the spaces do not fit or the linear
+part is not orthogonal (to within `64 * eps(Float32)`).
 """
 function transform_geometry(g::GridGeometry{N,W,T}, t::AffineTransform{W}) where {N,W,T}
   checkspaces(space(g), source(t), "transform_geometry needs a transform from the space of the grid")
+  A = SMatrix{W,W,Float64}(t.A)
+  maximum(abs, A' * A - I) <= 64 * eps(Float32) ||
+    throw(ArgumentError("transform_geometry needs a rotation or reflection; the linear part of the transform " *
+                        "is $(Matrix(t.A))"))
   GridGeometry(size(g); spacing=Tuple(spacing(g)), origin=t(origin(g)), direction=t.A * direction(g), space=target(t))
 end

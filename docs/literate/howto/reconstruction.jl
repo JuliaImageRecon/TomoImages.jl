@@ -1,9 +1,10 @@
-# # Wrap a Reconstruction in a SpatialImage
+# # Wrap a Reconstruction in a TomoImage
 #
 # A reconstruction ends with an array. This guide, for developers of reconstruction packages, turns
-# it into a [`SpatialImage`](@ref) that carries where its voxels lie, what its dimensions are and
-# how it was made: an MRI reconstruction of an oblique slab with echoes and coils, and an MPI
-# reconstruction with contrasts and a time series.
+# it into a [`TomoImage`](@ref) that carries where its voxels lie, what its dimensions are and
+# how it was made: an MRI reconstruction of an oblique volume with echoes and coils, and an MPI
+# reconstruction with contrasts and a time series. [Grids, Spaces and Transforms](@ref) explains
+# the conventions.
 
 using TomoImages
 
@@ -13,23 +14,25 @@ using TomoImages
 # size, the position of its center and the directions of its axes. A [`GridGeometry`](@ref) needs
 # the spacing, the center of the *first* voxel and the directions:
 #
-# * spacing = field of view ./ matrix size (the field of view spans from the outer edge of the first
-#   voxel to the outer edge of the last);
+# * spacing = field of view ./ matrix size, where the field of view spans from the outer edge of the
+#   first voxel to the outer edge of the last. With gaps between slices, the spacing along the slices
+#   is the distance between slice centers, not the slice thickness;
 # * origin = center - direction * (spacing .* (matrix size .- 1) ./ 2).
 #
-# ## MRI: an oblique slab
+# ## MRI: an oblique volume
 #
 # An MRI reconstruction of 64 × 64 × 8 voxels over a field of view of 220 × 220 × 40 mm, three
-# echoes and four receive coils. The slab is rotated by 20 degrees about the `z` axis of the patient
-# space [`LPS`](@ref); its read, phase and slice directions are the columns of `D`:
+# echoes and four receive coils. The volume is rotated by 20 degrees about the `z` axis of the
+# patient space [`LPS`](@ref); its read, phase and slice directions are the columns of `D`:
 
 matrix = (64, 64, 8)
-fov = (220.0, 220.0, 40.0)
+extent = (220.0, 220.0, 40.0)
 center = [10.0, -5.0, 30.0]
 dir_read, dir_phase, dir_slice = [cosd(20), sind(20), 0.0], [-sind(20), cosd(20), 0.0], [0.0, 0.0, 1.0]
 D = hcat(dir_read, dir_phase, dir_slice)
-voxel = fov ./ matrix
-g = GridGeometry(matrix; spacing=voxel, origin=center - D * collect(voxel .* (matrix .- 1) ./ 2), direction=D, space=LPS())
+voxel = extent ./ matrix
+g = GridGeometry(matrix; spacing=voxel, origin=center - D * collect(voxel .* (matrix .- 1) ./ 2),
+                 direction=D, space=LPS())
 
 # The center of the grid is where the scanner put it:
 
@@ -37,18 +40,19 @@ fov_center(g) ≈ center
 
 # The reconstruction returns one complex value per voxel, echo and coil. The dimensions get the
 # names of the MRI axes; the echo dimension holds the echo times, the coil dimension the coil
-# numbers as labels:
+# numbers as labels. `meta` is free: the package reads none of it, and the keys here are an example.
 
 reco = zeros(ComplexF32, 64, 64, 8, 3, 4)
-img = SpatialImage(reco, g;
-                   dims=(read=GridAxis(1), phase=GridAxis(2), slice=GridAxis(3),
-                         echo=NumericAxis([5.0, 10.0, 15.0]; unit="ms"), coil=CategoricalAxis(1:4)),
-                   meta=(quantity="MR signal", unit="a.u.", method="direct reconstruction"))
+img = TomoImage(reco, g;
+                dims=(read=GridAxis(1), phase=GridAxis(2), slice=GridAxis(3),
+                      echo=NumericAxis([5.0, 10.0, 15.0]; unit="ms"), coil=CategoricalAxis(1:4)),
+                meta=(quantity="MR signal", unit="a.u.", method="direct reconstruction"))
 summary(img)
 
-# A user of the image selects by name or by value and gets correctly placed images:
+# A user of the image selects by name or by value, and every selection keeps its place: slice 4
+# has its center 2.5 mm below the center of the volume along the slice direction:
 
-summary(selectvalue(img; echo=10.0, coil=2)), space(img[slice=4])
+summary(selectvalue(img; echo=10.0, coil=2)), fov_center(geometry(img[slice=4])) ≈ center - 2.5 * dir_slice
 
 # ## MPI: contrasts and a time series
 #
@@ -57,24 +61,25 @@ summary(selectvalue(img; echo=10.0, coil=2)), space(img[slice=4])
 
 struct MPIScanner <: AbstractSpace end
 
-# 20 × 20 × 10 voxels over 40 × 40 × 20 mm, centered 5 mm above the center of the scanner along
-# `z`; two tracers and 50 frames of 21.5 ms. The grid dimensions sit between the contrast and the
-# time dimension, in the order the reconstruction produces them:
+# 20 × 20 × 10 voxels over 40 × 40 × 20 mm, centered 5 mm from the center of the scanner along
+# `+z`; two tracers and 50 frames, 21.5 ms apart. The grid dimensions sit between the contrast and
+# the time dimension, in the order the reconstruction produces them:
 
 matrix = (20, 20, 10)
 voxel = (40.0, 40.0, 20.0) ./ matrix
 g = GridGeometry(matrix; spacing=voxel, origin=[0.0, 0.0, 5.0] .- voxel .* (matrix .- 1) ./ 2, space=MPIScanner())
 c = rand(Float32, 2, 20, 20, 10, 50)
-mpi = SpatialImage(c, g;
-                   dims=(contrast=CategoricalAxis(["tracer A", "tracer B"]),
-                         x=GridAxis(1), y=GridAxis(2), z=GridAxis(3),
-                         time=NumericAxis(0.0215 .* (0:49); unit="s")),
-                   meta=(quantity="concentration", unit="mmol/L"))
+mpi = TomoImage(c, g;
+                dims=(contrast=CategoricalAxis(["tracer A", "tracer B"]),
+                      x=GridAxis(1), y=GridAxis(2), z=GridAxis(3),
+                      time=NumericAxis(0.0215 .* (0:49); unit="s")),
+                meta=(quantity="concentration", unit="mmol/L"))
 summary(mpi)
 
-# The same functions apply as for the MRI image:
+# The same functions apply as for the MRI image. [`TomoImages.griddims`](@ref) gives the array
+# dimensions of the grid axes:
 
-summary(selectvalue(mpi; contrast="tracer B", time=0.5)), TomoImages.spatialdims(mpi)
+summary(selectvalue(mpi; contrast="tracer B", time=0.5)), TomoImages.griddims(mpi)
 
 # ## Checklist
 #
@@ -83,10 +88,15 @@ summary(selectvalue(mpi; contrast="tracer B", time=0.5)), TomoImages.spatialdims
 # * Spacings are positive; a flipped axis is a direction column with the opposite sign.
 # * The columns of the direction are orthonormal. Values read from files in `Float32` are
 #   accepted.
+# * A 2D slice in a 3D space has an origin of length 3 and a 3 × 2 direction.
+# * The element type of the geometry follows the numbers given for spacing, origin and direction
+#   (integers give `Float64`).
 # * The space says which coordinate system the positions are in: [`LPS`](@ref) or
 #   [`RAS`](@ref) where the scanner reports patient coordinates, a space of the package for scanner
 #   coordinates. Where the metadata relates the scanner to the patient, a method of
 #   [`transform_between`](@ref) makes that available.
 # * Every dimension has a name; non-grid dimensions have coordinates with a unit
 #   ([`NumericAxis`](@ref)) or labels ([`CategoricalAxis`](@ref)).
+# * The data may be any array, also on a GPU: the image wraps it, and `parent(img)` returns it as
+#   it is.
 # * The metadata says what the values are and how they were computed.

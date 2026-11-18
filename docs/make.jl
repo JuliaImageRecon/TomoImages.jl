@@ -28,24 +28,24 @@ makedocs(;
     "Home" => "index.md",
     "Getting Started" => "generated/examples/getting_started.md",
     "Tutorials" => [
-      "Explore a Spatial Image" => "generated/tutorials/explore.md",
-      "Overlay Images from Two Scanners" => "generated/tutorials/overlay.md",
+      "Explore a Tomographic Image" => "generated/tutorials/explore.md",
+      "Overlay Images from Two Modalities" => "generated/tutorials/overlay.md",
       "Analyze a Dynamic Image" => "generated/tutorials/dynamic.md",
     ],
-    "How to" => [
-      "Wrap a Reconstruction in a SpatialImage" => "generated/howto/reconstruction.md",
+    "How-To Guides" => [
+      "Wrap a Reconstruction in a TomoImage" => "generated/howto/reconstruction.md",
       "Define a Space" => "generated/howto/define_space.md",
       "Write a Resampler" => "generated/howto/write_resampler.md",
     ],
     "Explanation" => [
       "Grids, Spaces and Transforms" => "generated/explanation/conventions.md",
-      "Conventions of Formats and Packages" => "generated/explanation/formats.md",
     ],
     "Reference" => [
       "Spaces and Grids" => "api/grids.md",
       "Transforms" => "api/transforms.md",
       "Images" => "api/images.md",
       "Resampling" => "api/resampling.md",
+      "Conventions of Formats and Packages" => "generated/reference/formats.md",
       "Related Packages" => "related.md",
     ],
   ],

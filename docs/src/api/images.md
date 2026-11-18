@@ -4,11 +4,11 @@ An image is an array whose grid dimensions lie on a grid geometry, with a named 
 every dimension.
 
 ```@docs
-AbstractSpatialImage
-SpatialImage
+AbstractTomoImage
+TomoImage
 geometry
 TomoImages.dims
-TomoImages.spatialdims
+TomoImages.griddims
 meta
 selectvalue
 ```
