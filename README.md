@@ -1,12 +1,22 @@
 # TomoImages.jl
 
 TomoImages.jl describes where the voxels of tomographic images lie: in which coordinate system, at
-which positions and in which orientation. Reconstruction packages return their images in its types,
-so that images from different scanners can be compared, resampled onto each other and combined.
+which positions and in which orientation, and what their other dimensions are. Its types can be
+used by reconstruction packages to return their images and by packages that register, segment or
+combine images to read them, so that images from different scanners can be compared, resampled onto
+each other and combined.
+
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://JuliaImageRecon.github.io/TomoImages.jl/dev)
+[![Build Status](https://github.com/JuliaImageRecon/TomoImages.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/JuliaImageRecon/TomoImages.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![codecov](https://codecov.io/gh/JuliaImageRecon/TomoImages.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/JuliaImageRecon/TomoImages.jl)
+
+> [!IMPORTANT]
+> TomoImages.jl is in an early stage of development. Its interface may change between versions.
 
 - **Grid geometries** with an origin (the center of the first voxel), a spacing, a direction matrix
   for rotated and reflected grids, and the coordinate space they are written in.
-- **Spaces** as types: scanner spaces, the patient spaces LPS and RAS, and spaces of other packages.
+- **Spaces** as types: a default space, the patient spaces LPS and RAS, and spaces that other
+  packages define, for example for the coordinates of a scanner.
 - **Images** that wrap any array (on the CPU or a GPU) with its geometry, a name for every
   dimension, coordinates or labels for the non-grid dimensions (time, contrast, coil) and metadata.
 - **Transforms** between spaces, checked when they are composed or used.

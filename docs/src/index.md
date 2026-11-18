@@ -4,9 +4,10 @@
 
 TomoImages.jl describes reconstructed images together with their place in space: the positions
 and orientation of their voxels, the coordinate system these are given in (a *space*), and the
-meaning of every dimension. Reconstruction packages can return their images in its types, and
-packages that register, segment or combine images can read them, so that images from different
-scanners and modalities can be compared and resampled onto each other, on the CPU and on GPUs.
+meaning of every dimension. Its types can be used by reconstruction packages to return their
+images and by packages that register, segment or combine images to read them, so that images from
+different scanners and modalities can be compared and resampled onto each other, on the CPU and on
+GPUs.
 
 ```@example home
 using TomoImages
@@ -70,9 +71,9 @@ nearest neighbor and multilinear interpolation as one KernelAbstractions kernel 
 B-splines with Interpolations.jl, and resamplers of other packages. Integer images such as label
 maps are resampled with the nearest neighbor by default, so labels are not averaged.
 
-**Few dependencies and custom components.** Reconstruction packages can return these images with
-few dependencies, and other packages add spaces, resamplers and image types without changing
-TomoImages.
+**Few dependencies and custom components.** The package has few dependencies, so that
+reconstruction packages can use it to return their images, and other packages can add spaces,
+resamplers and image types without changing TomoImages.
 
 **Not in scope.** Reconstruction, registration, segmentation, reading scanner files and displaying
 images are tasks of other packages, which exchange their results through these types.
