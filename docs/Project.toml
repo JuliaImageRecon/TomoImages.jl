@@ -1,0 +1,15 @@
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+TomoImages = "a558cd07-c343-4fc3-8cfc-66b31d775242"
+
+[sources]
+TomoImages = {path = ".."}
+
+[compat]
+CairoMakie = "0.15"
+Documenter = "1"
+Literate = "2"
+StaticArrays = "1"
